@@ -271,19 +271,15 @@ def gameloop():
     maincar_rotated = maincar.copy()
     maincar_angle = 0
     car_rect = maincar.get_rect(bottomleft=(350, 495))
-    #define rotation function
-    def rotate_car(maincar_angle):
-        #rotate car surface and angle
-        maincar_rotated = pygame.transform.rotate(maincar, maincar_angle)
-        maincar_angle += 10
-        if maincar_angle > 360:
-            maincar_angle = 0
-        return maincar_rotated, maincar_angle
     maincar_rect = maincar_rotated.get_rect(center=car_rect.center)
     maincarX = maincar_rect.centerx
     maincarY = maincar_rect.centery
     maincarX_change = 0
     maincarY_change = 0
+
+    # Simple drifting variables
+    target_angle = 0  
+    current_angle = 0 
 
 
     # other cars
@@ -333,12 +329,12 @@ def gameloop():
             # checking if any key has been pressed
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
-                    maincarX_change += 4
-                    maincar_rotated, maincar_angle = rotate_car(-maincar_angle)
+                    maincarX_change += 2  # Reduced from 4 to 2
+                    target_angle = -5  # 5 degrees left rotation
 
                 if event.key == pygame.K_LEFT:
-                    maincarX_change -= 4
-                    maincar_rotated, maincar_angle = rotate_car(maincar_angle)
+                    maincarX_change -= 2  # Reduced from 4 to 2
+                    target_angle = 5   # 5 degrees right rotation
 
 
                 if event.key == pygame.K_UP:
@@ -373,11 +369,11 @@ def gameloop():
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_RIGHT:
                     maincarX_change = 0
-                    maincar_rotated, maincar_angle = rotate_car(0)
+                    target_angle = 0
 
                 if event.key == pygame.K_LEFT:
                     maincarX_change = 0
-                    maincar_rotated, maincar_angle = rotate_car(0)
+                    target_angle = 0
 
                 if event.key == pygame.K_UP:
                     speedometer += 0
@@ -388,6 +384,25 @@ def gameloop():
                     speedometer -= 0
                     if speedometer < 0:
                         speedometer = 0
+
+        # Handle continuous key presses for smooth movement
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            maincarX_change = -2
+            target_angle = 5
+        elif keys[pygame.K_RIGHT]:
+            maincarX_change = 2
+            target_angle = -5
+        else:
+            maincarX_change = 0
+            target_angle = 0
+
+        # Smooth rotation transition
+        current_angle += (target_angle - current_angle) * 0.1
+        maincar_rotated = pygame.transform.rotate(maincar, current_angle)
+        old_center = maincar_rect.center
+        maincar_rect = maincar_rotated.get_rect()
+        maincar_rect.center = old_center
 
         # setting boundary for our main car
         if maincarX < 178:
@@ -413,7 +428,7 @@ def gameloop():
         screen.blit(bg, (0, 0))
 
         # displaying our main car
-        screen.blit(maincar, (maincarX, maincarY))
+        screen.blit(maincar_rotated, maincar_rect)
 
         # displaing other cars
         screen.blit(car1, (car1X, car1Y))
@@ -429,6 +444,8 @@ def gameloop():
         # updating the values
         maincarX += maincarX_change
         maincarY += maincarY_change
+        maincar_rect.centerx = maincarX
+        maincar_rect.centery = maincarY
 
         # movement of the enemies
         car1Y += car1Ychange
